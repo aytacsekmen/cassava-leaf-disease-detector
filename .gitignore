@@ -88,9 +88,11 @@ dmypy.json
 # ML / Data / Model artifacts (DO NOT TRACK)
 # ============================================
 
-# Raw and processed data
-/data/
+# Raw and processed data (contents ignored, DVC tracking files allowed)
+/data/*
 !/data/.gitkeep
+!/data/*.dvc
+!/data/.gitignore
 
 # Model checkpoints and exports
 models/
@@ -125,9 +127,11 @@ mlartifacts/
 # DVC local storage
 storage/
 
-# DVC tracked files
-*.dvc
-
 # OS files
 Thumbs.db
 .DS_Store
+
+
+Homeworks_MLOps_METU_26s_guideline.pdf
+PROJECT_CONTEXT.md
+logs/*

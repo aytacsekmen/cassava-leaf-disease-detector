@@ -1,0 +1,5 @@
+defaults:
+  - preprocessing: preprocessing
+  - model: default
+  - training: training
+  - mlflow: mlflow

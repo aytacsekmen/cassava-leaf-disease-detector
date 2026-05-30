@@ -2,7 +2,8 @@
 
 Uses ``fire`` for command dispatch and ``hydra`` (Compose API) for
 configuration management.  All pipeline stages are accessible as
-subcommands: ``download``, ``preprocess``, ``train``, and ``infer``.
+subcommands: ``download``, ``preprocess``, ``train``, ``infer``, and
+``compare``.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from cassava_detector.data.download import download_data
 from cassava_detector.data.preprocess import preprocess as run_preprocess
 from cassava_detector.inference.predict import infer as run_infer
 from cassava_detector.training.trainer import train as run_train
+from cassava_detector.utils.plotting import generate_comparison_plots
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,14 +33,16 @@ CONFIG_DIR = str(PROJECT_ROOT / "configs")
 
 
 def _load_config(overrides: Optional[list[str]] = None) -> DictConfig:
-    """Load and merge all Hydra configuration files.
+    """Load the unified Hydra configuration via hierarchical defaults.
 
-    Uses the Hydra Compose API to load configs from the ``configs/``
-    directory without the decorator-based approach.
+    Uses a single entry point (``config.yaml``) with Hydra config group
+    defaults.  This enables hierarchical config selection, for example
+    ``model=mobilevit_s`` to swap the entire model configuration group.
 
     Args:
         overrides: Optional list of Hydra-style overrides
-            (e.g., ``["training.batch_size=64"]``).
+            (e.g., ``["training.batch_size=64"]`` or
+            ``["model=mobilevit_s"]``).
 
     Returns:
         Merged OmegaConf DictConfig with all configuration sections.
@@ -46,58 +50,27 @@ def _load_config(overrides: Optional[list[str]] = None) -> DictConfig:
     resolved_overrides = overrides or []
 
     with initialize_config_dir(config_dir=CONFIG_DIR, version_base=None):
-        preprocessing_cfg = compose(
-            config_name="preprocessing",
-            overrides=[
-                override
-                for override in resolved_overrides
-                if override.startswith("preprocessing.")
-            ],
-        )
-        model_cfg = compose(
-            config_name="model",
-            overrides=[
-                override
-                for override in resolved_overrides
-                if override.startswith("model.")
-            ],
-        )
-        training_cfg = compose(
-            config_name="training",
-            overrides=[
-                override
-                for override in resolved_overrides
-                if override.startswith("training.")
-            ],
-        )
-        mlflow_cfg = compose(
-            config_name="mlflow",
-            overrides=[
-                override
-                for override in resolved_overrides
-                if override.startswith("mlflow.")
-            ],
+        config = compose(
+            config_name="config",
+            overrides=resolved_overrides,
         )
 
-    merged = OmegaConf.create({
-        "preprocessing": OmegaConf.to_container(preprocessing_cfg),
-        "model": OmegaConf.to_container(model_cfg),
-        "training": OmegaConf.to_container(training_cfg),
-        "mlflow": OmegaConf.to_container(mlflow_cfg),
-    })
-
-    return merged
+    return config
 
 
 class Commands:
     """CLI commands for the cassava leaf disease detection pipeline.
 
     Each method corresponds to a pipeline stage.  Configuration is
-    automatically loaded from YAML files in the ``configs/`` directory.
+    automatically loaded from YAML files in the ``configs/`` directory
+    using Hydra's hierarchical config group system.
     """
 
     def download(self, **kwargs: Any) -> None:
-        """Download the Cassava Leaf Disease dataset from Kaggle.
+        """Download the Cassava Leaf Disease dataset from Google Drive.
+
+        Downloads a zip archive from Google Drive and extracts it into
+        the raw data directory.
 
         Keyword Args:
             Any Hydra-style overrides (e.g., raw_data_dir="data/raw").
@@ -133,7 +106,10 @@ class Commands:
         """Run the full training pipeline.
 
         Keyword Args:
-            overrides: List of Hydra-style config overrides.
+            overrides: List of Hydra-style config overrides. Supports
+                config group selection (e.g., ``model=mobilevit_s``)
+                and individual value overrides
+                (e.g., ``training.batch_size=64``).
         """
         overrides = kwargs.get("overrides", [])
         if isinstance(overrides, str):
@@ -166,6 +142,25 @@ class Commands:
             std=list(config.preprocessing.std),
         )
         logger.info("Inference result: %s", result)
+
+    def compare(self, **kwargs: Any) -> None:
+        """Generate comparative plots across all trained model architectures.
+
+        Queries MLflow for all completed training runs, groups them by
+        backbone architecture, and generates side-by-side comparison
+        plots for loss, accuracy, and F1 score.
+
+        Keyword Args:
+            output_dir: Directory for comparison plots (default: plots/comparison).
+        """
+        config = _load_config()
+        output_dir = kwargs.get("output_dir", "plots/comparison")
+        generate_comparison_plots(
+            tracking_uri=config.mlflow.tracking_uri,
+            experiment_name=config.mlflow.experiment_name,
+            output_dir=output_dir,
+        )
+        logger.info("Comparison plots generated at: %s", output_dir)
 
 
 def main() -> None:

@@ -78,9 +78,11 @@ def train(config: DictConfig) -> None:
         scheduler_t_max=training_config.scheduler_t_max,
     )
 
+    backbone_name = model_config.backbone
+
     checkpoint_callback = ModelCheckpoint(
-        dirpath="models/",
-        filename="cassava-{epoch:02d}-{val_loss:.4f}",
+        dirpath=f"models/{backbone_name}/",
+        filename=f"{backbone_name}-{{epoch:02d}}-{{val_loss:.4f}}",
         monitor=training_config.checkpoint_monitor,
         mode=training_config.checkpoint_mode,
         save_top_k=training_config.checkpoint_top_k,
@@ -147,7 +149,7 @@ def train(config: DictConfig) -> None:
         generate_plots(
             tracking_uri=mlflow_config.tracking_uri,
             experiment_name=mlflow_config.experiment_name,
-            output_dir="plots",
+            output_dir=f"plots/{backbone_name}",
         )
     except Exception as exc:
         logger.warning("Plot generation failed: %s", exc)
