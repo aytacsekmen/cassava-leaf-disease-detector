@@ -2,3 +2,4 @@ backbone: tf_efficientnetv2_b0
 num_classes: 5
 pretrained: true
 dropout_rate: 0.3
+image_size: 224
