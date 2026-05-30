@@ -35,6 +35,7 @@ class CassavaClassifier(pl.LightningModule):
         learning_rate: float = 0.001,
         weight_decay: float = 1e-5,
         scheduler_t_max: int = 50,
+        label_smoothing: float = 0.1,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
@@ -55,7 +56,7 @@ class CassavaClassifier(pl.LightningModule):
             nn.Linear(feature_dim, num_classes),
         )
 
-        self.loss_fn = nn.CrossEntropyLoss()
+        self.loss_fn = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
 
         self.val_accuracy = MulticlassAccuracy(num_classes=num_classes, average="macro")
         self.val_f1 = MulticlassF1Score(num_classes=num_classes, average="macro")

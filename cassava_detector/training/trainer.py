@@ -54,16 +54,18 @@ def train(config: DictConfig) -> None:
     training_config = config.training
     mlflow_config = config.mlflow
 
-    pl.seed_everything(preprocessing_config.random_seed, workers=True)
+
 
     image_dir = str(Path(preprocessing_config.raw_data_dir) / "train_images")
+
+    image_size = getattr(model_config, "image_size", preprocessing_config.image_size)
 
     data_module = CassavaDataModule(
         processed_data_dir=preprocessing_config.processed_data_dir,
         image_dir=image_dir,
         batch_size=training_config.batch_size,
         num_workers=training_config.num_workers,
-        image_size=preprocessing_config.image_size,
+        image_size=image_size,
         mean=list(preprocessing_config.mean),
         std=list(preprocessing_config.std),
     )
@@ -76,6 +78,7 @@ def train(config: DictConfig) -> None:
         learning_rate=training_config.learning_rate,
         weight_decay=training_config.weight_decay,
         scheduler_t_max=training_config.scheduler_t_max,
+        label_smoothing=training_config.label_smoothing,
     )
 
     backbone_name = model_config.backbone
@@ -112,7 +115,7 @@ def train(config: DictConfig) -> None:
         "learning_rate": training_config.learning_rate,
         "weight_decay": training_config.weight_decay,
         "max_epochs": training_config.max_epochs,
-        "image_size": preprocessing_config.image_size,
+        "image_size": image_size,
         "precision": training_config.precision,
         "early_stopping_patience": training_config.early_stopping_patience,
         "checkpoint_top_k": training_config.checkpoint_top_k,

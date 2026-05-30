@@ -162,14 +162,19 @@ class CassavaDataModule(pl.LightningDataModule):
     def _train_transforms(self) -> transforms.Compose:
         """Build augmentation pipeline for training data."""
         return transforms.Compose([
-            transforms.Resize((self.image_size, self.image_size)),
+            transforms.RandomResizedCrop(
+                (self.image_size, self.image_size), scale=(0.7, 1.0)
+            ),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
             transforms.RandomRotation(degrees=15),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+            transforms.ColorJitter(
+                brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1
+            ),
             transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
             transforms.ToTensor(),
             transforms.Normalize(mean=self.mean, std=self.std),
+            transforms.RandomErasing(p=0.25, scale=(0.02, 0.2)),
         ])
 
     def _eval_transforms(self) -> transforms.Compose:
