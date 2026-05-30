@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=cassava_data
 #SBATCH --partition=debug
-#SBATCH --nodelist=adep1,romer3,ubem,dl4
+#SBATCH --nodes=1
+#SBATCH --exclude=romer1,romer2,dl1,dl2,dl3,dl4,ubem
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=01:00:00

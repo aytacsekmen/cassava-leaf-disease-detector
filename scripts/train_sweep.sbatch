@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=cassava_sweep
 #SBATCH --partition=debug
-#SBATCH --nodelist=adep1,romer3,ubem,dl4
+#SBATCH --nodes=1
+#SBATCH --exclude=romer1,romer2,dl1,dl2,dl3,dl4,ubem
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
@@ -49,8 +50,13 @@ echo "============================================"
 cd "$SLURM_SUBMIT_DIR"
 mkdir -p logs
 
+# Resolve the MLflow server host — $SLURM_SUBMIT_HOST is the head node
+# where the server runs. This lets the default config stay portable (127.0.0.1)
+# while SLURM jobs correctly point to the head node.
+MLFLOW_HOST="${SLURM_SUBMIT_HOST:-$(hostname)}"
+
 uv run python commands.py train \
-    --overrides="['model=${MODEL_CONFIG}']"
+    --overrides="['model=${MODEL_CONFIG}','mlflow.tracking_uri=http://${MLFLOW_HOST}:5050']"
 
 echo "============================================"
 echo "Training complete for: $MODEL_CONFIG"
